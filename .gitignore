@@ -1,0 +1,57 @@
+# Python
+__pycache__/
+*.py[cod]
+*.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+ENV/
+env/
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Database
+*.db
+*.sqlite3
+
+# Application specific
+app/storage/characters/*
+app/storage/renders/*
+app/storage/thumbs/*
+!app/storage/characters/.gitkeep
+!app/storage/renders/.gitkeep
+!app/storage/thumbs/.gitkeep
+
+# Log files
+*.log
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# Environment variables
+.env
+
+# Embedded git repositories
+integrations/*/

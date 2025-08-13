@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  backend:
+    build: .
+    container_name: ai-avatar-video-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app/storage:/app/app/storage
+    environment:
+      - ENVIRONMENT=production
+      - ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8000,${FRONTEND_URL:-}
+      - LOG_LEVEL=info
+      - PREFER_AMD_GPU=true
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  frontend:
+    image: node:18-alpine
+    container_name: ai-avatar-video-frontend
+    restart: unless-stopped
+    working_dir: /app
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./web:/app
+    command: sh -c "cd ai-avatar-video-app && npm install && npm run build && npm start"
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+
+networks:
+  default:
+    name: ai-avatar-video-network

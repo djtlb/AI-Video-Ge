@@ -1,0 +1,38 @@
+rootProject.name = 'ai-avatar-video-app'
+
+// Ensure Expo Modules core and its annotation projects are included explicitly.
+// This fixes: "Project with path ':expo-modules-core' could not be found in root project 'android-annotation'".
+def expoModulesCoreRoot = new File(rootDir, "../node_modules/expo-modules-core")
+if (expoModulesCoreRoot.exists()) {
+  include ':expo-modules-core'
+  project(':expo-modules-core').projectDir = new File(expoModulesCoreRoot, 'android')
+
+  def expoAndroidAnnotation = new File(expoModulesCoreRoot, 'android-annotation')
+  if (expoAndroidAnnotation.exists()) {
+    include ':android-annotation'
+    project(':android-annotation').projectDir = expoAndroidAnnotation
+  }
+
+  def expoAndroidAnnotationProcessor = new File(expoModulesCoreRoot, 'android-annotation-processor')
+  if (expoAndroidAnnotationProcessor.exists()) {
+    include ':android-annotation-processor'
+    project(':android-annotation-processor').projectDir = expoAndroidAnnotationProcessor
+  }
+}
+
+dependencyResolutionManagement {
+  versionCatalogs {
+    reactAndroidLibs {
+      from(files(new File(["node", "--print", "require.resolve('react-native/package.json')"].execute(null, rootDir).text.trim(), "../gradle/libs.versions.toml")))
+    }
+  }
+}
+
+apply from: new File(["node", "--print", "require.resolve('expo/package.json')"].execute(null, rootDir).text.trim(), "../scripts/autolinking.gradle");
+useExpoModules()
+
+apply from: new File(["node", "--print", "require.resolve('@react-native-community/cli-platform-android/package.json', { paths: [require.resolve('react-native/package.json')] })"].execute(null, rootDir).text.trim(), "../native_modules.gradle");
+applyNativeModulesSettingsGradle(settings)
+
+include ':app'
+includeBuild(new File(["node", "--print", "require.resolve('@react-native/gradle-plugin/package.json', { paths: [require.resolve('react-native/package.json')] })"].execute(null, rootDir).text.trim()).getParentFile())

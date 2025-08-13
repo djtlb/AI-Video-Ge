@@ -1,0 +1,1341 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Local AI Avatar Video Generator</title>
+    <style>
+      body {
+        font-family: 'Inter', system-ui, sans-serif;
+        background: linear-gradient(120deg, #f8fafc 0%, #e0e7ff 100%);
+        max-width: 1000px;
+        margin: 32px auto;
+        padding: 0 16px;
+        color: #222;
+      }
+      /* Status message styles */
+      .error {
+        color: #e11d48;
+        background-color: #fee2e2;
+        padding: 12px;
+        border-radius: 8px;
+        margin: 10px 0;
+        border-left: 4px solid #e11d48;
+      }
+      .success {
+        color: #16a34a;
+        background-color: #dcfce7;
+        padding: 12px;
+        border-radius: 8px;
+        margin: 10px 0;
+        border-left: 4px solid #16a34a;
+      }
+      .loading {
+        color: #6366f1;
+        background-color: #e0e7ff;
+        padding: 12px;
+        border-radius: 8px;
+        margin: 10px 0;
+        border-left: 4px solid #6366f1;
+        animation: pulse 1.5s infinite;
+      }
+      @keyframes pulse {
+        0% { opacity: 0.6; }
+        50% { opacity: 1; }
+        100% { opacity: 0.6; }
+      }
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: #6366f1;
+        color: #fff;
+        border-radius: 16px;
+        padding: 24px 32px;
+        box-shadow: 0 4px 24px rgba(99,102,241,0.08);
+        margin-bottom: 24px;
+      }
+      h1 {
+        font-size: 2.2rem;
+        font-weight: 700;
+        letter-spacing: -1px;
+      }
+      section {
+        margin: 24px 0;
+        padding: 24px;
+        border: none;
+        border-radius: 18px;
+        background: #fff;
+        box-shadow: 0 2px 16px rgba(99,102,241,0.07);
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 18px;
+      }
+      .card {
+        border: none;
+        border-radius: 14px;
+        padding: 18px 12px 12px 12px;
+        text-align: center;
+        background: linear-gradient(120deg, #f1f5f9 0%, #e0e7ff 100%);
+        box-shadow: 0 2px 12px rgba(99,102,241,0.06);
+        transition: transform 0.2s, box-shadow 0.2s;
+      }
+      .card:hover {
+        transform: translateY(-4px) scale(1.03);
+        box-shadow: 0 6px 24px rgba(99,102,241,0.13);
+      }
+      img {
+        max-width: 100%;
+        border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(99,102,241,0.08);
+        margin-bottom: 8px;
+      }
+      input, button, textarea, select {
+        font-size: 16px;
+        padding: 10px;
+        border-radius: 8px;
+        border: 1px solid #d1d5db;
+        margin-bottom: 6px;
+        outline: none;
+        transition: border 0.2s;
+      }
+      input:focus, textarea:focus, select:focus {
+        border: 1.5px solid #6366f1;
+      }
+      button {
+        background: #6366f1;
+        color: #fff;
+        border: none;
+        cursor: pointer;
+        font-weight: 600;
+        box-shadow: 0 1px 4px rgba(99,102,241,0.08);
+        transition: background 0.2s, box-shadow 0.2s;
+      }
+      button:hover {
+        background: #4338ca;
+        box-shadow: 0 2px 8px rgba(99,102,241,0.13);
+      }
+      .row {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+      .pill {
+        padding: 6px 14px;
+        border: 1px solid #6366f1;
+        border-radius: 20px;
+        background: #eef2ff;
+        color: #4338ca;
+        font-weight: 500;
+        box-shadow: 0 1px 4px rgba(99,102,241,0.07);
+      }
+      .muted {
+        color: #e0e7ff;
+        font-size: 1.1rem;
+      }
+      label {
+        font-weight: 500;
+        color: #6366f1;
+      }
+      textarea {
+        resize: vertical;
+        min-height: 60px;
+        max-height: 180px;
+      }
+      video {
+        border-radius: 12px;
+        box-shadow: 0 2px 12px rgba(99,102,241,0.09);
+      }
+      /* Added class for character editor left panel */
+      .character-editor-left {
+        flex: 1;
+        min-width: 300px;
+      }
+      /* New CSS for modals */
+      .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.7);
+        z-index: 1000;
+        overflow-y: auto;
+      }
+      .modal-content {
+        position: relative;
+        background: white;
+        margin: 40px auto;
+        padding: 24px;
+        max-width: 800px;
+        border-radius: 16px;
+      }
+      .close-button {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        background: none;
+        color: #4b5563;
+        border: none;
+        font-size: 24px;
+        cursor: pointer;
+      }
+      .feature-button {
+        background: #4f46e5;
+      }
+      .icon {
+        margin-right: 4px;
+      }
+      .quick-nav {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+      }
+      .quick-nav span {
+        font-weight: 600;
+        color: #4b5563;
+      }
+      .quick-nav-button {
+        padding: 8px 16px;
+        background: #e0e7ff;
+        color: #4338ca;
+        border: none;
+        border-radius: 20px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: background 0.2s;
+      }
+      .quick-nav-button:hover {
+        background: #c7d2fe;
+      }
+      .nav-buttons {
+        justify-content: space-between;
+        margin-bottom: 20px;
+      }
+      .preview-container {
+        margin-top: 10px;
+      }
+      .preview-image {
+        max-width: 180px;
+        display: none;
+        border: 2px solid #6366f1;
+        border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(99,102,241,0.08);
+      }
+      .full-width {
+        width: 100%;
+      }
+      .editor-preview {
+        width: 100%;
+        max-width: 300px;
+        border-radius: 12px;
+        box-shadow: 0 2px 12px rgba(99,102,241,0.15);
+      }
+      .editor-input {
+        margin-top: 12px;
+      }
+      .editor-section {
+        flex: 1;
+        min-width: 300px;
+      }
+      .editor-heading {
+        margin-top: 0;
+      }
+      .button-row {
+        margin-top: 24px;
+      }
+      .apply-button {
+        flex: 1;
+      }
+      .reset-button {
+        background: #f3f4f6;
+        color: #4b5563;
+      }
+      .flex-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 24px;
+      }
+      .delete-button {
+        background: #ef4444;
+      }
+      .video-preview {
+        margin-top: 12px;
+        display: none;
+        text-align: center;
+      }
+      .video-player {
+        width: 100%;
+      }
+      .flex-1 {
+        flex: 1;
+      }
+      .text-decoration-none {
+        text-decoration: none;
+      }
+      .justify-center {
+        justify-content: center;
+      }
+      .character-options {
+        margin-left: 8px;
+      }
+      .character-tags {
+        margin-top: 8px;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .character-tag {
+        padding: 4px 10px;
+        background: #e0e7ff;
+        border-radius: 16px;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+      .character-tag:hover {
+        background: #c7d2fe;
+      }
+      .character-tag.active {
+        background: #818cf8;
+        color: white;
+      }
+      .selected-card {
+        border: 2px solid #6366f1;
+        transform: translateY(-4px);
+        box-shadow: 0 6px 24px rgba(99,102,241,0.13);
+      }
+      .visually-hidden {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+      .page-tabs {
+        display: flex;
+        margin-bottom: 24px;
+        border-bottom: 2px solid #e0e7ff;
+        overflow-x: auto;
+        position: sticky;
+        top: 0;
+        background: linear-gradient(120deg, #f8fafc 0%, #e0e7ff 100%);
+        padding: 10px 0;
+        z-index: 100;
+        box-shadow: 0 2px 8px rgba(99,102,241,0.1);
+      }
+      .page-tab {
+        padding: 12px 24px;
+        background: none;
+        border: none;
+        border-bottom: 3px solid transparent;
+        color: #4b5563;
+        font-weight: 600;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      .page-tab.active {
+        color: #6366f1;
+        border-bottom: 3px solid #6366f1;
+      }
+      .page-content {
+        display: none;
+      }
+      .active-page {
+        display: block;
+      }
+      .page-navigation {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 32px;
+        flex-wrap: wrap;
+        gap: 16px;
+      }
+      .nav-group {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .next-page-button, .prev-page-button, .nav-button {
+        padding: 12px 24px;
+        background: #6366f1;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+      .prev-page-button {
+        background: #e0e7ff;
+        color: #4338ca;
+      }
+      .nav-button {
+        background: #4f46e5;
+      }
+      .modal-footer {
+        margin-top: 24px;
+        padding-top: 16px;
+        border-top: 1px solid #e0e7ff;
+      }
+      .thumbnail {
+        margin-top: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Local AI Avatar Video Generator</h1>
+      <span class="muted">No audio • Local only</span>
+    </header>
+
+    <!-- Navigation buttons -->
+    <div class="row nav-buttons">
+      <button onclick="showRenders()" class="feature-button"><i class="icon">🎬</i> My Videos</button>
+      <button onclick="showSystemInfo()" class="feature-button"><i class="icon">📊</i> System Info</button>
+      <button onclick="showHelp()" class="feature-button"><i class="icon">❓</i> Help</button>
+      <button onclick="showAdvancedSettings()" class="feature-button"><i class="icon">⚙️</i> Advanced</button>
+    </div>
+
+    <!-- Quick Navigation -->
+    <div class="quick-nav">
+      <span>Quick Jump:</span>
+      <button onclick="showPage('uploadPage')" class="quick-nav-button">1) Upload</button>
+      <button onclick="showPage('charactersPage')" class="quick-nav-button">2) Characters</button>
+      <button onclick="showPage('generatePage')" class="quick-nav-button">3) Generate</button>
+    </div>
+
+    <!-- Page tabs -->
+    <div class="page-tabs">
+      <button class="page-tab active" onclick="showPage('uploadPage')">1) Upload Character</button>
+      <button class="page-tab" onclick="showPage('charactersPage')">2) Characters</button>
+      <button class="page-tab" onclick="showPage('generatePage')">3) Generate Video</button>
+    </div>
+
+    <!-- Page 1: Upload Character -->
+    <section id="uploadPage" class="page-content active-page">
+      <h2>1) Upload Character</h2>
+      <form id="uploadForm">
+        <div class="row">
+          <input type="text" id="name" placeholder="Character name" required />
+          <label for="photo" class="full-width">
+            Upload Photo: <input type="file" id="photo" accept="image/*" required />
+          </label>
+          <button type="submit">Upload & Cutout</button>
+        </div>
+        <div class="preview-container">
+          <img id="previewImg" class="preview-image" />
+        </div>
+      </form>
+      <div id="uploadMsg"></div>
+      <div class="page-navigation">
+        <div class="nav-group">
+          <button onclick="showPage('charactersPage')" class="next-page-button">Next Step <i class="icon">→</i></button>
+        </div>
+        <div class="nav-group">
+          <button onclick="showSystemInfo()" class="nav-button"><i class="icon">📊</i> System Info</button>
+          <button onclick="showHelp()" class="nav-button"><i class="icon">❓</i> Help</button>
+          <button onclick="showAdvancedSettings()" class="nav-button"><i class="icon">⚙️</i> Advanced Settings</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Page 2: Characters -->
+    <section id="charactersPage" class="page-content">
+      <h2>2) Characters</h2>
+      <div class="row">
+        <button onclick="loadCharacters()">Refresh</button>
+        <input type="text" id="characterSearch" placeholder="Search characters..." class="flex-1" oninput="filterCharacters()">
+        <label for="characterSort" class="visually-hidden">Sort characters</label>
+        <select id="characterSort" onchange="sortCharacters()" class="character-options" aria-label="Sort characters">
+          <option value="name">Sort by Name</option>
+          <option value="created">Sort by Date Created</option>
+          <option value="used">Sort by Most Used</option>
+        </select>
+        <button onclick="toggleSelectAll()" id="selectAllBtn" class="character-options">Select All</button>
+        <button onclick="showGroups()" class="feature-button character-options"><i class="icon">📋</i> Groups</button>
+      </div>
+      <div class="character-tags row" id="characterTags">
+        <!-- Tags will be added here dynamically -->
+      </div>
+      <div id="chars" class="grid"></div>
+      <div class="page-navigation">
+        <div class="nav-group">
+          <button onclick="showPage('uploadPage')" class="prev-page-button"><i class="icon">←</i> Back to Upload</button>
+          <button onclick="showPage('generatePage')" class="next-page-button">Next to Generate <i class="icon">→</i></button>
+        </div>
+        <div class="nav-group">
+          <button onclick="showRenders()" class="nav-button"><i class="icon">🎬</i> View My Videos</button>
+          <button onclick="showSystemInfo()" class="nav-button"><i class="icon">📊</i> System Info</button>
+          <button onclick="showHelp()" class="nav-button"><i class="icon">❓</i> Help</button>
+          <button onclick="showAdvancedSettings()" class="nav-button"><i class="icon">⚙️</i> Advanced Settings</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Page 3: Generate Video -->
+    <section id="generatePage" class="page-content">
+      <h2>3) Generate Video</h2>
+      <div class="row">
+        <textarea id="video_prompt" rows="3" class="flex-1" placeholder="Describe the scene (e.g., &quot;sunset beach, cinematic, wide shot, palm trees&quot;)"></textarea>
+        <div>
+          <label>Duration (10–25s) <input type="number" id="video_duration" min="10" max="25" value="12"></label><br/>
+          <label>Width <input type="number" id="video_width" value="768"></label><br/>
+          <label>Height <input type="number" id="video_height" value="432"></label><br/>
+          <label>FPS <input type="number" id="video_fps" value="12"></label><br/>
+          <label>Seed <input type="number" id="video_seed" placeholder="optional"></label>
+        </div>
+      </div>
+      <div class="row">
+        <button onclick="generateVideo()">Generate</button>
+        <span id="video_genMsg" class="pill"></span>
+      </div>
+      <div id="video_preview" class="video-preview">
+        <video id="video_out" controls class="video-player"></video>
+        <div id="video_thumb" class="thumbnail"></div>
+      </div>
+      <div class="page-navigation">
+        <div class="nav-group">
+          <button onclick="showPage('uploadPage')" class="nav-button"><i class="icon">←</i> Go to Upload</button>
+          <button onclick="showPage('charactersPage')" class="prev-page-button"><i class="icon">←</i> Back to Characters</button>
+        </div>
+        <div class="nav-group">
+          <button onclick="showRenders()" class="nav-button"><i class="icon">🎬</i> View All Videos</button>
+          <button onclick="showSystemInfo()" class="nav-button"><i class="icon">📊</i> System Info</button>
+          <button onclick="showHelp()" class="nav-button"><i class="icon">❓</i> Help</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Character Editor Modal -->
+    <div id="characterEditor" class="modal">
+      <div class="modal-content flex-row">
+        <button onclick="closeEditor()" class="close-button">&times;</button>
+        <div class="character-editor-left">
+          <img id="editorPreview" class="editor-preview" />
+          <div class="editor-input">
+            <input type="text" id="editorName" placeholder="Character name" class="full-width" />
+          </div>
+        </div>
+        <div class="editor-section">
+          <h4 class="editor-heading">Appearance</h4>
+          <div class="row">
+            <label>Scale: <input type="range" id="editorScale" min="0.2" max="2" step="0.05" value="1" /></label>
+            <span id="scaleValue">1.0</span>
+          </div>
+          <div class="row">
+            <label>Rotation: <input type="range" id="editorRotation" min="-180" max="180" step="5" value="0" /></label>
+            <span id="rotationValue">0°</span>
+          </div>
+          <div class="row">
+            <label>Brightness: <input type="range" id="editorBrightness" min="0.5" max="1.5" step="0.05" value="1" /></label>
+            <span id="brightnessValue">1.0</span>
+          </div>
+          <div class="row">
+            <label>Contrast: <input type="range" id="editorContrast" min="0.5" max="1.5" step="0.05" value="1" /></label>
+            <span id="contrastValue">1.0</span>
+          </div>
+          
+          <h4>Motion</h4>
+          <div class="row">
+            <label><input type="checkbox" id="editorFixedPosition" /> Fixed Position</label>
+          </div>
+          <div class="row">
+            <label>Path Type: 
+              <select id="editorPathType" class="full-width">
+                <option value="organic">Organic (Natural)</option>
+                <option value="circle">Circular</option>
+                <option value="figure8">Figure 8</option>
+                <option value="wave">Wave</option>
+              </select>
+            </label>
+          </div>
+          <div class="row">
+            <label>Movement Range: <input type="range" id="editorMoveRange" min="0.1" max="0.8" step="0.05" value="0.4" /></label>
+            <span id="moveRangeValue">0.4</span>
+          </div>
+          <div class="row">
+            <label>Breathing: <input type="range" id="editorBreathing" min="0" max="0.1" step="0.01" value="0.03" /></label>
+            <span id="breathingValue">0.03</span>
+          </div>
+          <div class="row">
+            <label>Breath Speed: <input type="range" id="editorBreathSpeed" min="0.5" max="2" step="0.1" value="1" /></label>
+            <span id="breathSpeedValue">1.0</span>
+          </div>
+          <div class="row">
+            <label>Direction Tilt: <input type="range" id="editorTilt" min="0" max="0.5" step="0.05" value="0.15" /></label>
+            <span id="tiltValue">0.15</span>
+          </div>
+          
+          <div class="row button-row">
+            <button onclick="applyEdits()" class="apply-button">Apply Changes</button>
+            <button onclick="resetEdits()" class="reset-button">Reset</button>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <div class="nav-group">
+            <button onclick="closeEditor(); showPage('uploadPage')" class="nav-button">Go to Upload</button>
+            <button onclick="closeEditor(); showPage('charactersPage')" class="nav-button">Go to Characters</button>
+            <button onclick="closeEditor(); showPage('generatePage')" class="nav-button">Go to Generate</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <section>
+      <h2>3) Generate Video</h2>
+      <div class="row">
+        <textarea id="prompt" rows="3" class="flex-1" placeholder="Describe the scene (e.g., &quot;sunset beach, cinematic, wide shot, palm trees&quot;)"></textarea>
+        <div>
+          <label>Duration (10–25s) <input type="number" id="duration" min="10" max="25" value="12"></label><br/>
+          <label>Width <input type="number" id="w" value="768"></label><br/>
+      </div>
+    </section>
+
+    <!-- My Videos Modal -->
+    <div id="rendersModal" class="modal">
+      <div class="modal-content">
+        <button onclick="closeModal('rendersModal')" class="close-button">&times;</button>
+        <h2>My Rendered Videos</h2>
+        <button onclick="loadRenders()">Refresh</button>
+        <div id="rendersList" class="grid"></div>
+        <div class="modal-footer">
+          <div class="nav-group">
+            <button onclick="closeModal('rendersModal'); showPage('uploadPage')" class="nav-button">Go to Upload</button>
+            <button onclick="closeModal('rendersModal'); showPage('charactersPage')" class="nav-button">Go to Characters</button>
+            <button onclick="closeModal('rendersModal'); showPage('generatePage')" class="nav-button">Go to Generate</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- System Info Modal -->
+    <div id="systemInfoModal" class="modal">
+      <div class="modal-content">
+        <button onclick="closeModal('systemInfoModal')" class="close-button">&times;</button>
+        <h2>System Information</h2>
+        <div id="systemInfoContent"></div>
+        <div class="modal-footer">
+          <div class="nav-group">
+            <button onclick="closeModal('systemInfoModal'); showPage('uploadPage')" class="nav-button">Go to Upload</button>
+            <button onclick="closeModal('systemInfoModal'); showPage('charactersPage')" class="nav-button">Go to Characters</button>
+            <button onclick="closeModal('systemInfoModal'); showPage('generatePage')" class="nav-button">Go to Generate</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Help Modal -->
+    <div id="helpModal" class="modal">
+      <div class="modal-content">
+        <button onclick="closeModal('helpModal')" class="close-button">&times;</button>
+        <h2>Help & Documentation</h2>
+        <div>
+          <h3>Creating Characters</h3>
+          <p>Upload an image with a clear view of the person. The background will be automatically removed.</p>
+          
+          <h3>Editing Characters</h3>
+          <p>Use the Edit button to adjust appearance and motion settings for each character.</p>
+          
+          <h3>Generating Videos</h3>
+          <p>Select one or more characters, provide a scene description, and click Generate.</p>
+          
+          <h3>Tips for Best Results</h3>
+          <ul>
+            <li>Use high-quality character images</li>
+            <li>Be specific in your scene descriptions</li>
+            <li>Adjust character settings for natural movement</li>
+            <li>Try different FPS settings for smoother videos</li>
+          </ul>
+        </div>
+        <div class="modal-footer">
+          <div class="nav-group">
+            <button onclick="closeModal('helpModal'); showPage('uploadPage')" class="nav-button">Go to Upload</button>
+            <button onclick="closeModal('helpModal'); showPage('charactersPage')" class="nav-button">Go to Characters</button>
+            <button onclick="closeModal('helpModal'); showPage('generatePage')" class="nav-button">Go to Generate</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Advanced Settings Modal -->
+    <div id="advancedSettingsModal" class="modal">
+      <div class="modal-content">
+        <button onclick="closeModal('advancedSettingsModal')" class="close-button">&times;</button>
+        <h2>Advanced Settings</h2>
+        <form id="advancedSettingsForm">
+          <div class="row">
+            <label>Image Generator Model:
+              <select id="imageModel" class="full-width" aria-label="Image Generator Model">
+                <option value="stable-diffusion-xl">Stable Diffusion XL</option>
+                <option value="stable-diffusion-v1.5">Stable Diffusion v1.5</option>
+                <option value="comfyui">ComfyUI (if enabled)</option>
+              </select>
+            </label>
+          </div>
+          <div class="row">
+            <label>Background Detail Level: 
+              <select id="bgDetail" class="full-width" aria-label="Background Detail Level">
+                <option value="low">Low (Faster)</option>
+                <option value="medium" selected>Medium</option>
+                <option value="high">High (Slower)</option>
+              </select>
+            </label>
+          </div>
+          <div class="row">
+            <label>Guidance Scale: <input type="range" id="guidanceScale" min="1" max="20" step="0.5" value="7.5" /></label>
+            <span id="guidanceScaleValue">7.5</span>
+          </div>
+          <div class="row">
+            <label>Negative Prompt: <input type="text" id="negativePrompt" value="blurry, bad quality, distorted" class="full-width"/></label>
+          </div>
+          <div class="row">
+            <button type="button" onclick="saveAdvancedSettings()">Save Settings</button>
+          </div>
+        </form>
+        <div class="modal-footer">
+          <div class="nav-group">
+            <button onclick="closeModal('advancedSettingsModal'); showPage('uploadPage')" class="nav-button">Go to Upload</button>
+            <button onclick="closeModal('advancedSettingsModal'); showPage('charactersPage')" class="nav-button">Go to Characters</button>
+            <button onclick="closeModal('advancedSettingsModal'); showPage('generatePage')" class="nav-button">Go to Generate</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let selected = new Set();
+      let currentEditingCharId = null;
+      let characterSettings = {};
+      let advancedSettings = {
+        imageModel: "stable-diffusion-xl",
+        bgDetail: "medium",
+        guidanceScale: 7.5,
+        negativePrompt: "blurry, bad quality, distorted"
+      };
+      let allCharacters = [];
+      let isSelectAllActive = false;
+      let selectedTag = null;
+      let characterGroups = {
+        "Favorites": [],
+        "Recently Used": []
+      };
+
+      // Feature button functions
+      function showRenders() {
+        loadRenders();
+        document.getElementById('rendersModal').style.display = 'block';
+      }
+
+      function showSystemInfo() {
+        loadSystemInfo();
+        document.getElementById('systemInfoModal').style.display = 'block';
+      }
+
+      function showHelp() {
+        document.getElementById('helpModal').style.display = 'block';
+      }
+
+      function showAdvancedSettings() {
+        // Populate form with current settings
+        document.getElementById('imageModel').value = advancedSettings.imageModel;
+        document.getElementById('bgDetail').value = advancedSettings.bgDetail;
+        document.getElementById('guidanceScale').value = advancedSettings.guidanceScale;
+        document.getElementById('guidanceScaleValue').textContent = advancedSettings.guidanceScale;
+        document.getElementById('negativePrompt').value = advancedSettings.negativePrompt;
+        
+        document.getElementById('advancedSettingsModal').style.display = 'block';
+      }
+
+      function closeModal(modalId) {
+        document.getElementById(modalId).style.display = 'none';
+      }
+
+      // Page navigation functions
+      function showPage(pageId) {
+        // Hide all pages
+        const pages = document.querySelectorAll('.page-content');
+        pages.forEach(page => page.classList.remove('active-page'));
+        
+        // Show selected page
+        document.getElementById(pageId).classList.add('active-page');
+        
+        // Update tab states
+        const tabs = document.querySelectorAll('.page-tab');
+        tabs.forEach(tab => tab.classList.remove('active'));
+        
+        // Activate correct tab
+        let tabIndex = 0;
+        if (pageId === 'charactersPage') tabIndex = 1;
+        else if (pageId === 'generatePage') tabIndex = 2;
+        
+        tabs[tabIndex].classList.add('active');
+        
+        // If showing the characters page, load characters
+        if (pageId === 'charactersPage') {
+          loadCharacters();
+        }
+        
+        // Scroll to top
+        window.scrollTo(0, 0);
+      }
+
+      // Load rendered videos list
+      async function loadRenders() {
+        try {
+          const res = await fetch('/renders');
+          const data = await res.json();
+          const root = document.getElementById('rendersList');
+          root.innerHTML = '';
+          
+          if (data.length === 0) {
+            root.innerHTML = '<p>No rendered videos found.</p>';
+            return;
+          }
+          
+          data.forEach(render => {
+            const div = document.createElement('div');
+            div.className = 'card';
+            div.innerHTML = `
+              <video controls class="video-player">
+                <source src="/download?video_path=${encodeURIComponent(render.video_path)}" type="video/mp4">
+              </video>
+              <div><b>${render.prompt.slice(0, 30)}${render.prompt.length > 30 ? '...' : ''}</b></div>
+              <div class="row justify-center">
+                <button onclick="window.open('/download?video_path=${encodeURIComponent(render.video_path)}', '_blank')">Download</button>
+                <button onclick="deleteRender(${render.id})" class="delete-button">Delete</button>
+              </div>
+            `;
+            root.appendChild(div);
+          });
+        } catch (err) {
+          console.error('Error loading renders:', err);
+          document.getElementById('rendersList').innerHTML = '<p>Error loading renders. Please try again.</p>';
+        }
+      }
+
+      // Delete a rendered video
+      async function deleteRender(id) {
+        if (!confirm('Delete this rendered video?')) return;
+        try {
+          await fetch(`/renders/${id}`, { method: 'DELETE' });
+          loadRenders();
+        } catch (err) {
+          console.error('Error deleting render:', err);
+          alert('Error deleting render. Please try again.');
+        }
+      }
+
+      // Load system information
+      async function loadSystemInfo() {
+        try {
+          const res = await fetch('/system/info');
+          const data = await res.json();
+          const content = document.getElementById('systemInfoContent');
+          
+          content.innerHTML = `
+            <div class="row">
+              <div class="flex-1">
+                <h3>System</h3>
+                <p><strong>OS:</strong> ${data.os || 'Unknown'}</p>
+                <p><strong>CPU:</strong> ${data.cpu || 'Unknown'}</p>
+                <p><strong>Memory:</strong> ${data.memory || 'Unknown'}</p>
+                <p><strong>GPU:</strong> ${data.gpu || 'None detected'}</p>
+              </div>
+              <div class="flex-1">
+                <h3>Integration Services</h3>
+                <p><strong>Talking Face:</strong> ${data.services?.talking_face ? 'Available' : 'Not available'}</p>
+                <p><strong>ComfyUI:</strong> ${data.services?.comfyui ? 'Available' : 'Not available'}</p>
+                <p><strong>Image Generator:</strong> ${data.services?.image_generator ? 'Available' : 'Not available'}</p>
+                <p><strong>FaceChain:</strong> ${data.services?.facechain ? 'Available' : 'Not available'}</p>
+              </div>
+            </div>
+          `;
+        } catch (err) {
+          console.error('Error loading system info:', err);
+          document.getElementById('systemInfoContent').innerHTML = '<p>Error loading system information. Please try again.</p>';
+        }
+      }
+
+      // Save advanced settings
+      function saveAdvancedSettings() {
+        advancedSettings = {
+          imageModel: document.getElementById('imageModel').value,
+          bgDetail: document.getElementById('bgDetail').value,
+          guidanceScale: parseFloat(document.getElementById('guidanceScale').value),
+          negativePrompt: document.getElementById('negativePrompt').value
+        };
+        
+        alert('Advanced settings saved successfully!');
+        closeModal('advancedSettingsModal');
+      }
+
+      // Update guidance scale value display
+      document.getElementById('guidanceScale').addEventListener('input', function() {
+        document.getElementById('guidanceScaleValue').textContent = this.value;
+      });
+
+      async function loadCharacters(){
+        try {
+          const res = await fetch('/characters');
+          const data = await res.json();
+          allCharacters = data;
+          
+          // Populate recent and favorites groups (as an example)
+          // In a real implementation, these would be fetched from storage
+          if (data.length > 0) {
+            characterGroups["Recently Used"] = data.slice(0, Math.min(3, data.length)).map(ch => ch.id);
+            characterGroups["Favorites"] = data.filter(ch => ch.id % 2 === 0).map(ch => ch.id); // Just an example
+          }
+          
+          renderCharacters(data);
+          
+          // Update character tags count
+          const tagsContainer = document.getElementById('characterTags');
+          const tagElements = tagsContainer.querySelectorAll('.character-tag');
+          tagElements.forEach(el => {
+            const groupName = el.dataset.tag;
+            el.textContent = groupName + ` (${characterGroups[groupName].length})`;
+          });
+        } catch (err) {
+          console.error('Error loading characters:', err);
+          document.getElementById('chars').innerHTML = '<p>Error loading characters. Please try again.</p>';
+        }
+      }
+
+      function toggleSel(id, btn){
+        if(selected.has(id)){ 
+          selected.delete(id); 
+          btn.textContent = 'Select'; 
+          btn.closest('.card').classList.remove('selected-card');
+        } else { 
+          selected.add(id); 
+          btn.textContent = 'Selected'; 
+          btn.closest('.card').classList.add('selected-card');
+        }
+        
+        // Update select all button state
+        const visibleCards = document.querySelectorAll('#chars .card');
+        const visibleSelected = Array.from(visibleCards).every(card => 
+          selected.has(parseInt(card.dataset.charId))
+        );
+        
+        isSelectAllActive = visibleSelected && visibleCards.length > 0;
+        document.getElementById('selectAllBtn').textContent = isSelectAllActive ? 'Deselect All' : 'Select All';
+      }
+
+      async function delChar(id){
+        if(!confirm('Delete character?')) return;
+        await fetch('/characters/' + id, { method: 'DELETE' });
+        loadCharacters();
+      }
+
+      // Character filtering and grouping functions
+      function filterCharacters() {
+        const searchTerm = document.getElementById('characterSearch').value.toLowerCase();
+        const filteredChars = allCharacters.filter(ch => 
+          ch.name.toLowerCase().includes(searchTerm)
+        );
+        renderCharacters(filteredChars);
+      }
+
+      function sortCharacters() {
+        const sortOption = document.getElementById('characterSort').value;
+        let sortedChars = [...allCharacters];
+        
+        switch(sortOption) {
+          case 'name':
+            sortedChars.sort((a, b) => a.name.localeCompare(b.name));
+            break;
+          case 'created':
+            // Assuming characters have a created_at property
+            sortedChars.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+            break;
+          case 'used':
+            // Sort by usage count (if tracked)
+            sortedChars.sort((a, b) => (b.usage_count || 0) - (a.usage_count || 0));
+            break;
+        }
+        
+        renderCharacters(sortedChars);
+      }
+
+      function toggleSelectAll() {
+        const btn = document.getElementById('selectAllBtn');
+        if(isSelectAllActive) {
+          // Deselect all
+          selected.clear();
+          btn.textContent = 'Select All';
+          isSelectAllActive = false;
+        } else {
+          // Select all currently visible characters
+          const charCards = document.querySelectorAll('#chars .card');
+          charCards.forEach(card => {
+            const charId = parseInt(card.dataset.charId);
+            if(!isNaN(charId)) {
+              selected.add(charId);
+            }
+          });
+          btn.textContent = 'Deselect All';
+          isSelectAllActive = true;
+        }
+        
+        // Update UI to show selected state
+        updateSelectionUI();
+      }
+
+      function updateSelectionUI() {
+        const charCards = document.querySelectorAll('#chars .card');
+        charCards.forEach(card => {
+          const charId = parseInt(card.dataset.charId);
+          const selectBtn = card.querySelector('button');
+          if(selected.has(charId)) {
+            selectBtn.textContent = 'Selected';
+            card.classList.add('selected-card');
+          } else {
+            selectBtn.textContent = 'Select';
+            card.classList.remove('selected-card');
+          }
+        });
+      }
+
+      function filterByTag(tag) {
+        selectedTag = tag === selectedTag ? null : tag;
+        const tagElements = document.querySelectorAll('.character-tag');
+        tagElements.forEach(el => {
+          el.classList.toggle('active', el.dataset.tag === selectedTag);
+        });
+        
+        if(selectedTag) {
+          const groupChars = characterGroups[selectedTag] || [];
+          const filteredChars = allCharacters.filter(ch => groupChars.includes(ch.id));
+          renderCharacters(filteredChars);
+        } else {
+          renderCharacters(allCharacters);
+        }
+      }
+
+      function showGroups() {
+        // Implementation for character groups modal
+        alert('Character groups feature coming soon!');
+        
+        // This would open a modal for managing character groups
+        // like "Favorites", "Recently Used", "Custom Groups", etc.
+      }
+
+      function renderCharacters(characters) {
+        const root = document.getElementById('chars');
+        root.innerHTML = '';
+        
+        // Render tags first
+        const tagsContainer = document.getElementById('characterTags');
+        tagsContainer.innerHTML = '';
+        
+        Object.keys(characterGroups).forEach(groupName => {
+          const tag = document.createElement('span');
+          tag.className = 'character-tag' + (selectedTag === groupName ? ' active' : '');
+          tag.textContent = groupName + ` (${characterGroups[groupName].length})`;
+          tag.dataset.tag = groupName;
+          tag.onclick = () => filterByTag(groupName);
+          tagsContainer.appendChild(tag);
+        });
+        
+        // Render characters
+        characters.forEach(ch => {
+          const div = document.createElement('div');
+          div.className = 'card' + (selected.has(ch.id) ? ' selected-card' : '');
+          div.dataset.charId = ch.id;
+          div.innerHTML = `
+            <img src="${ch.thumb_path}" alt="${ch.name}"/>
+            <div><b>${ch.name}</b></div>
+            <div class="row justify-center">
+              <button onclick="toggleSel(${ch.id}, this)">${selected.has(ch.id) ? 'Selected' : 'Select'}</button>
+              <button onclick="openEditor(${ch.id}, '${ch.name}', '${ch.thumb_path}')" class="feature-button">Edit</button>
+              <button onclick="delChar(${ch.id})" class="delete-button">Delete</button>
+            </div>
+          `;
+          root.appendChild(div);
+        });
+      }
+
+      // Image preview before upload
+      document.getElementById('photo').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        const preview = document.getElementById('previewImg');
+        if(file) {
+          const reader = new FileReader();
+          reader.onload = function(ev) {
+            preview.src = ev.target.result;
+            preview.style.display = 'block';
+          };
+          reader.readAsDataURL(file);
+        } else {
+          preview.src = '';
+          preview.style.display = 'none';
+        }
+      });
+
+      document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = document.getElementById('name').value.trim();
+        const file = document.getElementById('photo').files[0];
+        
+        if(!name || !file){ 
+          document.getElementById('uploadMsg').textContent = 'Please provide both a name and a photo.';
+          document.getElementById('uploadMsg').classList.add('error');
+          return; 
+        }
+        
+        // Show loading message
+        document.getElementById('uploadMsg').textContent = 'Uploading and processing image...';
+        document.getElementById('uploadMsg').classList.remove('error');
+        document.getElementById('uploadMsg').classList.add('loading');
+        
+        try {
+          const fd = new FormData();
+          fd.append('name', name);
+          fd.append('file', file);
+          
+          const res = await fetch('/characters', { method: 'POST', body: fd });
+          
+          if (!res.ok) {
+            const errorData = await res.json();
+            throw new Error(errorData.detail || 'Upload failed');
+          }
+          
+          const data = await res.json();
+          document.getElementById('uploadMsg').textContent = 'Successfully uploaded: ' + data.name;
+          document.getElementById('uploadMsg').classList.remove('loading', 'error');
+          document.getElementById('uploadMsg').classList.add('success');
+          document.getElementById('previewImg').style.display = 'none';
+          
+          // Reset form
+          document.getElementById('name').value = '';
+          document.getElementById('photo').value = '';
+          
+          // Load characters
+          loadCharacters();
+          
+          // After successful upload, show the Characters page
+          setTimeout(() => {
+            showPage('charactersPage');
+          }, 1500);
+        } catch (error) {
+          console.error('Upload error:', error);
+          document.getElementById('uploadMsg').textContent = 'Error: ' + (error.message || 'Failed to upload image');
+          document.getElementById('uploadMsg').classList.remove('loading');
+          document.getElementById('uploadMsg').classList.add('error');
+        }
+      });
+
+      // Character editor functions
+      function openEditor(charId, name, thumbPath) {
+        currentEditingCharId = charId;
+        document.getElementById('editorName').value = name;
+        document.getElementById('editorPreview').src = thumbPath;
+        
+        // Reset sliders to default
+        document.getElementById('editorScale').value = 1;
+        document.getElementById('editorRotation').value = 0;
+        document.getElementById('editorBrightness').value = 1;
+        document.getElementById('editorContrast').value = 1;
+        document.getElementById('editorFixedPosition').checked = false;
+        document.getElementById('editorMoveRange').value = 0.4;
+        document.getElementById('editorBreathing').value = 0.03;
+        document.getElementById('editorBreathSpeed').value = 1;
+        document.getElementById('editorTilt').value = 0.15;
+        document.getElementById('editorPathType').value = 'organic';
+        
+        // Try to fetch existing character settings if available
+        if (characterSettings[charId]) {
+          const settings = characterSettings[charId];
+          if (settings.scale) document.getElementById('editorScale').value = settings.scale;
+          if (settings.rotation) document.getElementById('editorRotation').value = settings.rotation;
+          if (settings.brightness) document.getElementById('editorBrightness').value = settings.brightness;
+          if (settings.contrast) document.getElementById('editorContrast').value = settings.contrast;
+          if (settings.fixed_position !== undefined) document.getElementById('editorFixedPosition').checked = settings.fixed_position;
+          if (settings.move_range) document.getElementById('editorMoveRange').value = settings.move_range;
+          if (settings.breathe_amount) document.getElementById('editorBreathing').value = settings.breathe_amount;
+          if (settings.breathe_speed) document.getElementById('editorBreathSpeed').value = settings.breathe_speed;
+          if (settings.tilt_factor) document.getElementById('editorTilt').value = settings.tilt_factor;
+          if (settings.path_type) document.getElementById('editorPathType').value = settings.path_type;
+        }
+        
+        updateSliderValues();
+        
+        // Show editor
+        document.getElementById('characterEditor').style.display = 'block';
+      }
+      
+      function closeEditor() {
+        document.getElementById('characterEditor').style.display = 'none';
+        currentEditingCharId = null;
+      }
+      
+      function updateSliderValues() {
+        document.getElementById('scaleValue').textContent = document.getElementById('editorScale').value;
+        document.getElementById('rotationValue').textContent = document.getElementById('editorRotation').value + '°';
+        document.getElementById('brightnessValue').textContent = document.getElementById('editorBrightness').value;
+        document.getElementById('contrastValue').textContent = document.getElementById('editorContrast').value;
+        document.getElementById('moveRangeValue').textContent = document.getElementById('editorMoveRange').value;
+        document.getElementById('breathingValue').textContent = document.getElementById('editorBreathing').value;
+        document.getElementById('breathSpeedValue').textContent = document.getElementById('editorBreathSpeed').value;
+        document.getElementById('tiltValue').textContent = document.getElementById('editorTilt').value;
+      }
+      
+      // Add event listeners to update values as sliders change
+      document.getElementById('editorScale').addEventListener('input', updateSliderValues);
+      document.getElementById('editorRotation').addEventListener('input', updateSliderValues);
+      document.getElementById('editorBrightness').addEventListener('input', updateSliderValues);
+      document.getElementById('editorContrast').addEventListener('input', updateSliderValues);
+      document.getElementById('editorMoveRange').addEventListener('input', updateSliderValues);
+      document.getElementById('editorBreathing').addEventListener('input', updateSliderValues);
+      document.getElementById('editorBreathSpeed').addEventListener('input', updateSliderValues);
+      document.getElementById('editorTilt').addEventListener('input', updateSliderValues);
+      
+      async function applyEdits() {
+        if (!currentEditingCharId) return;
+        
+        const editData = {
+          name: document.getElementById('editorName').value,
+          scale: parseFloat(document.getElementById('editorScale').value),
+          rotate: parseFloat(document.getElementById('editorRotation').value),
+          brightness: parseFloat(document.getElementById('editorBrightness').value),
+          contrast: parseFloat(document.getElementById('editorContrast').value),
+          // Motion parameters
+          fixed_position: document.getElementById('editorFixedPosition').checked,
+          move_range: parseFloat(document.getElementById('editorMoveRange').value),
+          breathe_amount: parseFloat(document.getElementById('editorBreathing').value),
+          breathe_speed: parseFloat(document.getElementById('editorBreathSpeed').value),
+          tilt_factor: parseFloat(document.getElementById('editorTilt').value),
+          path_type: document.getElementById('editorPathType').value
+        };
+        
+        try {
+          const res = await fetch(`/characters/${currentEditingCharId}/edit`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(editData)
+          });
+          
+          if (res.ok) {
+            // Store character settings for video generation
+            characterSettings[currentEditingCharId] = {
+              scale: editData.scale,
+              rotation: editData.rotate,
+              brightness: editData.brightness,
+              contrast: editData.contrast,
+              fixed_position: editData.fixed_position,
+              move_range: editData.move_range,
+              breathe_amount: editData.breathe_amount,
+              breathe_speed: editData.breathe_speed,
+              tilt_factor: editData.tilt_factor,
+              path_type: editData.path_type
+            };
+            
+            // Close editor and refresh character list
+            closeEditor();
+            loadCharacters();
+          } else {
+            alert('Failed to update character');
+          }
+        } catch (err) {
+          console.error('Error updating character:', err);
+          alert('Error updating character');
+        }
+      }
+      
+      function resetEdits() {
+        document.getElementById('editorScale').value = 1;
+        document.getElementById('editorRotation').value = 0;
+        document.getElementById('editorBrightness').value = 1;
+        document.getElementById('editorContrast').value = 1;
+        document.getElementById('editorFixedPosition').checked = false;
+        document.getElementById('editorMoveRange').value = 0.4;
+        document.getElementById('editorBreathing').value = 0.03;
+        document.getElementById('editorBreathSpeed').value = 1;
+        document.getElementById('editorTilt').value = 0.15;
+        updateSliderValues();
+      }
+
+      async function generateVideo(){
+        const prompt = document.getElementById('video_prompt').value.trim();
+        const duration = parseInt(document.getElementById('video_duration').value, 10);
+        const w = parseInt(document.getElementById('video_width').value, 10);
+        const h = parseInt(document.getElementById('video_height').value, 10);
+        const fps = parseInt(document.getElementById('video_fps').value, 10);
+        const seed = document.getElementById('video_seed').value ? parseInt(document.getElementById('video_seed').value, 10) : null;
+        
+        if(selected.size === 0){ 
+          alert('Select at least one character'); 
+          showPage('charactersPage'); // Navigate to character selection page
+          return; 
+        }
+        
+        // Include character settings if available
+        const selectedIds = Array.from(selected);
+        const payload = { 
+          prompt, 
+          character_ids: selectedIds, 
+          duration_seconds: duration, 
+          width: w, 
+          height: h, 
+          fps, 
+          seed 
+        };
+        
+        // Add character settings if available
+        const settings = {};
+        let hasSettings = false;
+        
+        selectedIds.forEach(id => {
+          if (characterSettings[id]) {
+            settings[id] = characterSettings[id];
+            hasSettings = true;
+          }
+        });
+        
+        if (hasSettings) {
+          payload.character_settings = settings;
+        }
+        
+        // Add advanced settings
+        payload.image_model = advancedSettings.imageModel;
+        payload.bg_detail = advancedSettings.bgDetail;
+        payload.guidance_scale = advancedSettings.guidanceScale;
+        payload.negative_prompt = advancedSettings.negativePrompt;
+        
+        document.getElementById('video_genMsg').textContent = 'Generating... (this can take a bit)';
+        const res = await fetch('/generate', { 
+          method: 'POST', 
+          headers: { 'Content-Type': 'application/json' }, 
+          body: JSON.stringify(payload) 
+        });
+        
+        const data = await res.json();
+        if(data.video_path){
+          const url = '/download?video_path=' + encodeURIComponent(data.video_path);
+          const vid = document.getElementById('video_out');
+          vid.src = url;
+          document.getElementById('video_preview').style.display = 'block';
+          vid.style.display = 'block';
+          document.getElementById('video_genMsg').textContent = 'Done!';
+          // Show video thumbnail preview
+          document.getElementById('video_thumb').innerHTML = `<a href='${url}' target='_blank' class='text-decoration-none'><span class='pill'>Download Video</span></a>`;
+        } else {
+          document.getElementById('video_genMsg').textContent = 'Failed';
+          document.getElementById('video_preview').style.display = 'none';
+        }
+      }
+
+      // Initialize the page
+      showPage('uploadPage');
+    </script>
+  </body>
+</html>

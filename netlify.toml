@@ -1,0 +1,14 @@
+# netlify.toml - Configuration file for deploying to Netlify
+[build]
+  command = "pip install -r requirements.txt -t ./"
+  functions = "netlify/functions"
+  publish = "app/static"
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
