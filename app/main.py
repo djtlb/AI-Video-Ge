@@ -297,7 +297,13 @@ async def generate_video(req: GenerateRequest):
     # Load avatars - prefer edited version if available
     avatars = []
     char_settings = {}
-    
+        
+            
+        # Convert prompt to lowercase for character name matching
+    if req.prompt:
+        prompt_lower = req.prompt.lower()
+    else:
+        prompt_lower = ""
     for i, ch in enumerate(chars):
         # Use edited path if it exists, otherwise use cutout path
         img_path = ch.edited_path if ch.edited_path and os.path.exists(ch.edited_path) else ch.cutout_path
@@ -332,14 +338,21 @@ async def generate_video(req: GenerateRequest):
                 settings['breathe_speed'] = ch.breathe_speed
             if ch.tilt_factor is not None:
                 settings['tilt_factor'] = ch.tilt_factor
+                
             if ch.path_type is not None:
                 settings['path_type'] = ch.path_type
                 
             # Add position if stored in meta
             if ch.meta and 'position_x' in ch.meta and 'position_y' in ch.meta:
                 settings['position_x'] = ch.meta['position_x']
-                settings['position_y'] = ch.meta['position_y']
-                
+             
+             settings['position_y'] = ch.meta['position_y']
+          # If the character's name is mentioned in the prompt, set name_mentioned flag
+        if prompt_lower and ch.name and ch.name.lower() in prompt_lower:
+            settings['name_mentioned'] = True
+        
+
+              
             if settings:
                 char_settings[i] = settings
 
