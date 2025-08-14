@@ -1,6 +1,6 @@
 # Local AI Avatar Video Generator
 
-**Run locally, no audio, 10–25s clips, multi-character.**
+**Run locally, audio support (optional), 10‑25s clips, multi-character.**
 
 ## Quickstart
 
@@ -52,10 +52,11 @@ You can create a character through the web interface or using the provided scrip
 
 ## Features
 
-- Create characters from images with automatic background removal
+ - Create characters from images with automatic background removal
 - Edit character appearance (scale, rotation, brightness, contrast)
 - Configure animation settings (movement, breathing, path type)
 - Generate videos with AI avatars on custom backgrounds
+- Combine rendered videos with custom audio tracks
 - Place multiple characters in scenes
 - Configure video settings (duration, resolution, FPS)
 - View generated videos
@@ -69,6 +70,7 @@ You can create a character through the web interface or using the provided scrip
 2. **Select and Edit Characters**: Browse characters, edit appearance and animation
 3. **Generate Video**: Select characters, describe scene, configure settings, generate
 
+4. **Add Audio (Optional)**: After generating a video, use the `/add-audio` API or the web interface to upload an audio file and combine it with your video.
 ## Troubleshooting
 
 If you encounter issues:
