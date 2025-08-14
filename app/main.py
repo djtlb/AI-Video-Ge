@@ -741,6 +741,45 @@ async def generate_advanced_video(
         fname = os.path.basename(out_path)
         final_path = os.path.join(renders_dir, fname)
         os.replace(out_path, final_path)
+# Add audio to a rendered video
+@app.post('/add-audio')
+async def add_audio(video_path: str = Form(...), file: UploadFile = File(...)):
+    """
+    Combine a rendered video with an uploaded audio file.
+    The input video_path can be an absolute path or a relative path returned by the API.
+    """
+    # Read uploaded audio content and save to a temporary file
+    content = await file.read()
+    if len(content) == 0:
+        raise HTTPException(status_code=400, detail='Empty audio file')
+    audio_dir = os.path.join(BASE_DIR, 'storage', 'audio')
+    os.makedirs(audio_dir, exist_ok=True)
+    import time
+    import random
+    base_name = os.path.splitext(file.filename)[0]
+    timestamp = int(time.time())
+    random_suffix = random.randint(1000, 9999)
+    audio_filename = f"{base_name}_{timestamp}_{random_suffix}.wav"
+    audio_path = os.path.join(audio_dir, audio_filename)
+    with open(audio_path, 'wb') as f:
+        f.write(content)
+    # Determine absolute paths
+    input_video = video_path if os.path.isabs(video_path) else os.path.join(BASE_DIR, video_path.lstrip('/'))
+    # Prepare output file path
+    out_name = f"{os.path.splitext(os.path.basename(input_video))[0]}_with_audio_{timestamp}.mp4"
+    out_dir = os.path.join(BASE_DIR, 'storage', 'renders')
+    os.makedirs(out_dir, exist_ok=True)
+    output_path = os.path.join(out_dir, out_name)
+    # Use ffmpeg to combine audio and video
+    try:
+        v = ffmpeg.input(input_video)
+        a = ffmpeg.input(audio_path)
+        out = ffmpeg.output(v.video, a.audio, output_path, vcodec='copy', acodec='aac', shortest=None, movflags='faststart')
+        ffmpeg.run(out, overwrite_output=True, quiet=True)
+    except Exception as e:
+        logger.error(f"Error adding audio: {e}")
+        raise HTTPException(status_code=500, detail=f"Error adding audio: {str(e)}")
+    return {'video_path': output_path}
 
         logger.info(f"[ADV_GENERATE] Completed -> {final_path}")
         return {
